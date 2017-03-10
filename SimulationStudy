@@ -1,28 +1,18 @@
 ### TESTING RESULTS ###
-
+library(dplyr)
+library(tidyr)
 library(Matrix)
 library(coda)
 library(tmvtnorm)
 library(MASS)
 library(truncnorm)
+library(ggplot2)
 
 Mu <- c(0,0,0)
 
-conditionalmeansig <- function(i, Sigma, mu,Beta){
-  Sigma11 <- Sigma[i,i]
-  Sigma12 <- Sigma[i,]
-  Sigma21 <- Sigma[-i,i]
-  Sigma22 <- Sigma[-i,-i]
-  Sigma12 <- Sigma[i,-i]
-  
-  condmu <- mu[i]+Sigma12%*%solve(Sigma22)%*%(Beta[-i,]-as.matrix(mu[-i]))
-  
-  condsig <- Sigma11 - Sigma12%*%solve(Sigma22)%*%Sigma21
-  return(list(condmu, condsig))
-}
 
 constant <- 1
-K <- 7000
+K <- 20000
 counter <- 0
 nu <- 3
 nunot <- 3
@@ -33,6 +23,14 @@ Betastore <- array(-999, dim = c(p, K+1))
 Taustore <- rep(-999, K)
 Lambdastore <- array(-999, dim = c(ny, K))
 
+
+seeds <- seeds[,-1]
+seeds <- round(seeds,2)
+#write.csv(seeds, file = "seeds.csv")
+
+seeds <- read.csv("seeds.csv")[,-1]
+
+seeds
 
 Sufficient.BetaChains <- list(1)
 Sufficient.TauChain <- list(1)
@@ -46,64 +44,67 @@ ASIS.BetaChains <- list(1)
 ASIS.TauChain <- list(1)
 ASIS.LambdaChains <- list(1)
 
+Sandwich.BetaChains <- list(1)
+Sandwich.TauChain <- list(1)
+Sandwich.LambdaChains <- list(1)
 
 TrueBeta <- c(3, -1, 1.5)
 
-seeds <- array(c(3, -1, .7, 1, -1, 3, 5, -3, 6, 4, 2, -3, 3, -1, 1.5), dim = c(3, 5))
+##### SUFFICIENT ALGORITHIM #######
+# out <- generateinfo(as.matrix(TrueBeta))
+# y <- out[[1]]
+# X <- out[[2]]
 
+load("X.r")
+read.csv("X.csv")
 
-generateinfo <- function(Beta){
-  
-  y <- NA
-  
-  X <- as.matrix(cbind(rep(1,100),rnorm(100), rnorm(100)))
-  
-  rnk <- rankMatrix(X)[1]
-  
-  if(rnk < dim(Beta)[1]){
-    cat("Rank Matrix Problem")
-  }
-  
-  ny <- 100
-  
-  z <- NA
-  
-  for(j in 1:ny){
-    z[j] <- rt(1, 7, (X%*%Beta)[j])
-    y[j] <- 1
-    if(z[j] < 0){
-      y[j] <- 0
-    }
-  }
-  
- return(list(y,X,Beta))
-  
+y <- read.csv("y.csv")[,-1]
+X <- read.csv("X.csv")[,-1]
+
+X <- as.matrix(X)
+
+#write.csv(X, file = "X.csv")
+#write.csv(y, file   = "y.csv")
+
+Betastore <- Sandwich.BetaChains[[5]]
+
+Beta.Var <- var(Betastore)
+
+sdB1 <- sd(Betastore[-(1:500),1])
+sdB2 <- sd(Betastore[-(1:500),2])
+sdB3 <- sd(Betastore[-(1:500),3])
+
+mnB1 <- mean(Betastore[-(1:500),1])
+mnB2 <- mean(Betastore[-(1:500),2])
+mnB3 <- mean(Betastore[-(1:500),3])
+
+seeds <- array(-999, dim = c(3,5))
+
+seeds[1,1:4] <- rt(4,2*sdB1/(1-sdB1))+mnB1
+seeds[2,1:4] <- rt(4,2*sdB2/(1-sdB2))+mnB2
+seeds[3,1:4] <- rt(4,2*sdB3/(1-sdB3))+mnB3
+
+for(i in 1:4){
+seeds[,i]  <-  rmvt(1, sigma = Beta.Var, delta = c(mnB1, mnB2,mnB3), df = c(2*sdB1/(1-sdB1), 2*sdB2/(1-sdB2), 2*sdB3/(1-sdB3)))
 }
 
+seeds[,5] <- TrueBeta
 
-##### SUFFICIENT ALGORITHIM #######
- 
- out <- generateinfo(as.matrix(TrueBeta))
-
-  y <- out[[1]]
-  
-  X <- out[[2]]
-  read.csv(X, file = "X.csv")
-read.csv(y, file = "y.csv")
-
+save(seeds, file = "seeds.R")
 
 Sigmanot <- constant*t(X)%*%X
 
 count <- 0
 
 for(v in 1:5){
+  
   Beta <- seeds[,v] 
   count <- count + 1
   zz <- 1
   Betastore[,zz] <- Beta
   
   zz <- zz + 1
-  counter <- counter + 1
+-  counter <- counter + 1
   for(i in 1:K){
     
     for(j in 1:ny){
@@ -120,11 +121,7 @@ for(v in 1:5){
       
       lambda[j] <- rgamma(1, a, b)
     }
-    lambda
     
-    z
-    
-    cbind(y, z, X%*%Beta)
     
     atau <- (nunot + p)/2
     btau <- (nunot + t(Beta)%*%Sigmanot%*%Beta)/2
@@ -142,6 +139,8 @@ for(v in 1:5){
     zz <- zz + 1
   }
   
+ 
+ 
   
   Sufficient.BetaChains[[count]] <- t(Betastore)
   Sufficient.TauChain[[count]] <- t(Taustore)
@@ -151,11 +150,23 @@ for(v in 1:5){
 
 
 
+load("X.r")
+
+save(Sufficient.BetaChains, file = "Sufficient.BetaChains.R")
+save(Sufficient.TauChain, file = "Sufficient.TauChains.R")
+save(Sufficient.LambdaChains, file = "Sufficient.LambdaChains.R")
+
+plot(Sufficient.BetaChains[[1]][,1])
+plot(Sufficient.BetaChains[[1]][,2])
+plot(Sufficient.BetaChains[[1]][,3])
+
+plot(Sufficient.BetaChains[[2]][,1])
+plot(Sufficient.BetaChains[[2]][,2])
+plot(Sufficient.BetaChains[[2]][,3])
 
 
 
-
-
+Sufficient.BetaChains[[1]][,3]
 
 ################### Ancillary Version #######################
 
@@ -348,6 +359,9 @@ Ancillary.LambdaChains[[counter]] <- t(Lambdastore)
 
 
 
+save(Ancillary.BetaChains, file = "Ancillary.BetaChains.R")
+save(Ancillary.TauChain, file = "Ancillary.TauChain.R")
+save(Ancillary.LambdaChains, file = "Ancillary.LambdaChains.R")
 
 
 write.csv(Ancillary.BetaChains, file = "ancillaryBetaChains.csv")
@@ -356,7 +370,7 @@ write.csv(Ancillary.LambdaChains, file = "ancillaryLambdachains.csv" )
 
 
 
-
+load("Ancillary.BetaChains.R")
 ############ ASIS VERSION #############################
 
 
@@ -365,7 +379,11 @@ write.csv(Ancillary.LambdaChains, file = "ancillaryLambdachains.csv" )
 
 
 
+
+
+
 counter <- 0
+
 
 for(v in 1:5){
 
@@ -549,28 +567,102 @@ for(v in 1:5){
 
 
 
+
+save(ASIS.BetaChains, file = "ASIS.BetaChains.R")
+save(ASIS.TauChain, file = "ASIS.TauChain.R")
+save(ASIS.LambdaChains, file = "ASIS.LambdaChains.R")
+
+
 write.csv(ASIS.BetaChains, file = "ASISBetaChains.csv")
 write.csv(ASIS.TauChain, file = "ASISTauChain.csv")
 write.csv(ASIS.LambdaChains, file = "ASISLambdachains.csv" )
 
+count <- 0
+gstore <- NA
+
+n <- length(y)
+
+for(v in 1:5){
+  Beta <- seeds[,v] 
+  
+  count <- count + 1
+  zz <- 1
+  Betastore[,zz] <- Beta
+  
+  zz <- zz + 1
+  counter <- counter + 1
+  for(i in 1:K){
+    
+    for(j in 1:ny){
+      low <- -Inf
+      high <- Inf
+      
+      ifelse(y[j] == 0, high <- 0, low <- 0)
+      
+      z[j] <- rtmvnorm(1, mean = (X%*%Beta)[j], lower = low, upper = high, algorithm = "gibbs")
+      
+      
+      
+      a <- (nu+1)/2 
+      b <- (nu+(z[j]-(X%*%Beta)[j])^2)/2
+      
+      lambda[j] <- rgamma(1, a, b)
+      
+    }
+    
+    if(sum(is.na(z)) > 0){
+      cat("Here 1", "\n")
+    }
+    
+    if(sum(is.na(lambda)) > 0){
+      cat("Here 2 \n")
+    }
+    
+    atau <- (nunot + p)/2
+    btau <- (nunot + t(Beta)%*%Sigmanot%*%Beta)/2
+    
+    tau <- rgamma(1, atau, btau)
+    
+    L <- diag(lambda)
+    
+    Q <- L^.5%*%X%*%solve(t(X)%*%L%*%X+tau*Sigmanot)%*%t(X)%*%L^.5
+    
+    I <- diag(rep(1, dim(Q)[1]))
+    
+    g <- (rgamma(1,shape = n/2, rate = t(z)%*%L^.5%*%(I - Q)%*%L^.5%*%z)/2)^.5
+    shape <- n/2
+    rate <- (t(z)%*%L^.5%*%(I - Q)%*%L^.5%*%z)/2
+    
+    
+    if(sum(is.na(g)) > 0){
+      cat("here 3 \n")
+    }
+    gstore[zz-1] <- g
+    
+    
+    Beta <- as.matrix(mvrnorm(n = 1, mu = g*solve(t(X)%*%L%*%X+tau*Sigmanot)%*%t(X)%*%L%*%z, Sigma = solve(t(X)%*%L%*%X+tau*Sigmanot)))
+    if(sum(is.na(Beta)) > 0){
+      cat("here 4 \n")
+    }
+    
+    Betastore[,zz] <- Beta
+    Taustore[zz-1] <- tau
+    Lambdastore[,zz-1] <- lambda
+    zz <- zz + 1
+  }
+  
+  
+  Sandwich.BetaChains[[count]] <- t(Betastore)
+  Sandwich.TauChain[[count]] <- t(Taustore)
+  Sandwich.LambdaChains[[count]] <- t(Lambdastore)
+  
+}
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+save(Sandwich.BetaChains, file = "Sandwich.BetaChains.R")
+save(Sandwich.TauChain, file = "Sandwich.TauChain.R")
+save(Sandwich.LambdaChains, file = "Sandwich.LambdaChains.R")
 
 
 
@@ -578,71 +670,118 @@ write.csv(ASIS.LambdaChains, file = "ASISLambdachains.csv" )
 mcmclist <- list(1)
 
 for(i in 1:5){
-  colnames(ASIS.BetaChains[[i]]) <- c("Beta 1", "Beta 2", "Beta 3")
-  colnames(Ancillary.BetaChains[[i]]) <- c("Beta 1", "Beta 2", "Beta 3")
-  colnames(Sufficient.BetaChains[[i]]) <- c("Beta 1", "Beta 2", "Beta 3")
-  
-  mcmclist[[i]] <- mcmc.list(mcmc(ASIS.BetaChains[[i]]), mcmc(Ancillary.BetaChains[[i]]), mcmc(Sufficient.BetaChains[[i]]))
-  
-  
+  colnames(ASIS.BetaChains[[i]]) <- c("Beta.1", "Beta.2", "Beta.3")
+  colnames(Ancillary.BetaChains[[i]]) <- c("Beta.1", "Beta.2", "Beta.3")
+  colnames(Sufficient.BetaChains[[i]]) <- c("Beta.1", "Beta.2", "Beta.3")
+  colnames(Sandwich.BetaChains[[i]]) <- c("Beta.1", "Beta.2", "Beta.3") 
 }
 
 
-seeds
+mcmclist[[1]] <- mcmc.list(mcmc(Sufficient.BetaChains[[1]]), mcmc(Sufficient.BetaChains[[2]]), mcmc(Sufficient.BetaChains[[3]]),mcmc(Sufficient.BetaChains[[4]]), mcmc(Sufficient.BetaChains[[5]]))
 
-gelman.c1 <- gelman.diag(mcmclist[[1]], confidence = 0.95, transform=FALSE, autoburnin=TRUE, multivariate = TRUE)
-plot(mcmclist[[1]])
-gelman.plot(mcmclist[[1]])
-gelman.c1
+mcmclist[[2]] <- mcmc.list(mcmc(Ancillary.BetaChains[[1]]), mcmc(Ancillary.BetaChains[[2]]), mcmc(Ancillary.BetaChains[[3]]),mcmc(Ancillary.BetaChains[[4]]), mcmc(Ancillary.BetaChains[[5]]))
 
-gelman.c2 <- gelman.diag(mcmclist[[2]], confidence = 0.95, transform=FALSE, autoburnin=TRUE, multivariate = TRUE)
-plot(mcmclist[[2]])
-gelman.plot(mcmclist[[2]])
-gelman.c2
+mcmclist[[3]] <- mcmc.list(mcmc(ASIS.BetaChains[[1]]), mcmc(ASIS.BetaChains[[2]]), mcmc(ASIS.BetaChains[[3]]),mcmc(ASIS.BetaChains[[4]]), mcmc(ASIS.BetaChains[[5]]))
 
-gelman.c3 <- gelman.diag(mcmclist[[3]], confidence = 0.95, transform=FALSE, autoburnin=TRUE, multivariate = TRUE)
-plot(mcmclist[[3]])
-gelman.plot(mcmclist[[3]])
-gelman.c3
-
-gelman.c4 <- gelman.diag(mcmclist[[4]], confidence = 0.95, transform=FALSE, autoburnin=TRUE, multivariate = TRUE)
-plot(mcmclist[[4]])
-gelman.plot(mcmclist[[4]])
-gelman.c4
-
-gelman.c5 <- gelman.diag(mcmclist[[5]], confidence = 0.95, transform=FALSE, autoburnin=TRUE, multivariate = TRUE)
-plot(mcmclist[[5]])
-gelman.plot(mcmclist[[5]])
-gelman.c5
-
-autocorr.plot(mcmclist[[1]])
-
-autocorr.plot(mcmclist[[2]])
-
-autocorr.plot(mcmclist[[3]])
-
-autocorr.plot(mcmclist[[4]])
-
-autocorr.plot(mcmclist[[5]])
-
-traceplot(mcmclist[[1]])
-
-traceplot(mcmclist[[2]])
-
-traceplot(mcmclist[[3]])
-
-traceplot(mcmclist[[4]])
-
-traceplot(mcmclist[[5]])
-
-geweke.diag(mcmclist[[1]])
-geweke.plot(mcmclist[[1]])
-
-geweke.diag(mcmclist[[2]])
-geweke.plot(mcmclist[[2]])
-
-geweke.diag(mcmclist[[3]])
-geweke.plot(mcmclist[[3]])
+mcmclist[[4]] <- mcmc.list(mcmc(Sandwich.BetaChains[[1]]), mcmc(Sandwich.BetaChains[[2]]), mcmc(Sandwich.BetaChains[[3]]),mcmc(Sandwich.BetaChains[[4]]), mcmc(Sandwich.BetaChains[[5]]))
 
 save(mcmclist, file = "mcmclist.R")
-write.csv(mcmclist, file = "mcmclist.csv")
+
+
+############## #######################
+
+
+##### ACF Plotting ######
+
+Suff.Beta.ACF <- BetaAggregate(Sufficient.BetaChains, "Sufficient")
+Anc.Beta.ACF <- BetaAggregate(Ancillary.BetaChains, "Ancillary")
+ASIS.Beta.ACF <- BetaAggregate(ASIS.BetaChains, "ASIS")
+Sand.Beta.ACF <- BetaAggregate(Sandwich.BetaChains, "Sandwich")
+
+ACF <- rbind(Suff.Beta.ACF, Anc.Beta.ACF, ASIS.Beta.ACF, Sand.Beta.ACF)
+
+ggplot(ACF, aes(x = Lag, y = values, colour = Method)) + geom_line() + facet_grid(Beta ~ Chain)
+
+
+### Trace Plotting ####
+
+trace(Sufficient.BetaChains, 1, Beta.3)
+
+
+#### Gelman Plotting ####
+
+Suf.Bout <- GelmanWrapper(Sufficient.BetaChains, 5, ks)
+
+Suf.Bout <- data.frame(t(Suf.Bout), colnames(Suf.Bout))
+
+colnames(Suf.Bout)[length(colnames(Suf.Bout))] <- "Iteration"
+
+Anc.Bout <-  GelmanWrapper(Ancillary.BetaChains, 5, ks) 
+
+Anc.Bout <- data.frame(t(Anc.Bout), colnames(Anc.Bout))
+
+colnames(Anc.Bout)[length(colnames(Anc.Bout))] <- "Iteration"
+
+ASI.Bout <- GelmanWrapper(ASIS.BetaChains, 5, ks)
+
+ASI.Bout <- data.frame(t(ASI.Bout), colnames(ASI.Bout))
+
+colnames(ASI.Bout)[length(colnames(ASI.Bout))] <- "Iteration"
+
+San.Bout <-  GelmanWrapper(Sandwich.BetaChains, 5, ks)
+
+San.Bout <- data.frame(t(San.Bout), colnames(San.Bout))
+
+colnames(San.Bout)[length(colnames(San.Bout))] <- "Iteration"
+
+Bout <- as.data.frame(rbind(Suf.Bout, Anc.Bout, ASI.Bout, San.Bout))
+
+Bout <- as.data.frame(cbind(Bout, rep(c("Suf","Anc", "ASI", "Sand"), each = dim(San.Bout)[1])))
+
+colnames(Bout)[length(colnames(Bout))] <- "Method" 
+
+kk <- data.frame(c(Bout$X1, Bout$X2, Bout$X3), Bout$Iteration, Bout$Method, rep(paste("Beta", 1:3, sep = "."), each = length(Bout$X1)))
+
+colnames(kk) <- c("Value", "Iteration", "Method", "Beta")
+
+kk$Iteration <- as.numeric(as.character(kk$Iteration))
+
+kk.B1 <- kk[kk$Beta == "Beta.1",]
+
+kk.B2 <- kk[kk$Beta == "Beta.2",]
+
+kk.B3 <- kk[kk$Beta == "Beta.3",]
+
+ggplot(kk.B1, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman Beta 0")
+
+
+ggplot(kk.B2, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman Beta 1")
+
+
+ggplot(kk.B3, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman Beta 2") 
+
+### 
+
+frac1 <- c(.05, .1, .2)
+frac2 <- c(.5, .3, .1)
+
+gew <- gewekewrapper(mcmclist, frac1, frac2)
+
+beta <- c(paste("Beta", 0:2, sep = "."))
+Method <- c("Suff", "Anc", "ASIS", "Sand")
+chains <- paste("Chain", 1:5, sep = ".")
+
+Geweke <- Gewekedataframe(gew, frac1, frac2, beta, Method, chains)
+
+colors <- apply(as.matrix(as.numeric(as.character(Geweke$Value))),1,colorout)
+
+Geweke <- data.frame(Geweke, colors)
+
+colnames(Geweke)[length(colnames(Geweke))] <- "Z.score"
+
+
+ggplot(data = Geweke, aes(x = Init.Fraction, y = End.Fraction))+geom_point(aes(color = Z.score))+facet_wrap(Method~Chain)+scale_colour_manual(values = c("green", "yellow", "red"))
+
+
+
+
