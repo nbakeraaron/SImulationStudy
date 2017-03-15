@@ -57,7 +57,7 @@ generateinfo <- function(Beta){
   
 }
 
-trace <- function(x,seed, k = 20000){
+trace <- function(x, seed, k = 20000, title){
   
   x <- data.frame(x[[seed]],rep(0:k,3))
   
@@ -67,7 +67,7 @@ trace <- function(x,seed, k = 20000){
   
   colnames(x) <- c("Iteration", "Beta", "Values")
   
-  ggplot(x, aes(x = Iteration, y = Values)) + geom_line() + facet_grid(Beta ~ .)
+  ggplot(x, aes(x = Iteration, y = Values)) + geom_line() + facet_grid(Beta ~ .) + ggtitle(title)
   
 }
 
@@ -123,7 +123,7 @@ BetaAggregate <- function(BetaChains, name, p = 3){
   
   X <- sapply(BetaChains, ACFWrapper)
   
-  X.2 <- data.frame(X, rep(paste("Beta", 1:p), each = length(X[,1])/p))
+  X.2 <- data.frame(X, rep(paste("Beta", 1:p-1), each = length(X[,1])/p))
   
   colnames(X.2) <- c(paste("Chain", 1:length(BetaChains), sep = "."), "Beta")
   
@@ -150,7 +150,7 @@ BetaAggregate <- function(BetaChains, name, p = 3){
 ACF.Gather <- function(ChainList){
   Chains <- sapply(ChainList, ACFWrapper)
   
-  Chains.2 <- data.frame(Chains, rep(paste("Beta", 1:p), each = length(Suff.ACF[,1])/p))
+  Chains.2 <- data.frame(Chains, rep(paste("Beta", 1:p-1), each = length(Suff.ACF[,1])/p))
   
   colnames(Chains.2) <- c(paste("Chain", 1:length(ChainList), sep = "."), "Beta")
   
@@ -169,8 +169,8 @@ mean.func <- function(x){
   out <- apply(x, 2, mean)
 }
 
-sds <- function(x){
-  out <- apply(x, 2, sd)
+vars <- function(x){
+  out <- apply(x, 2, var)
   return(out)
 }
 
@@ -185,15 +185,11 @@ Gelman <- function(data, M, k){
   
   Thetahat <- apply(Thetas,1,mean)
   
-  Thetas-Thetahat
-  
-  Thetas[1,]-Thetahat[1]
-  
   B <-  N/(M-1)*apply((Thetas-Thetahat)^2, 1, sum)
   
-  sdsvals <- sapply(data,sds)
+  varvals <- sapply(data,vars)
   
-  W <- apply(sdsvals,1,mean)
+  W <- apply(varvals,1,mean)
   
   V <- (N-1)/N*W + (M+1)/(M*N)*B
   
