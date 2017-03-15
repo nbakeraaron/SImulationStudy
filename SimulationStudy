@@ -12,7 +12,7 @@ Mu <- c(0,0,0)
 
 
 constant <- 1
-K <- 20000
+K <- 5000
 counter <- 0
 nu <- 3
 nunot <- 3
@@ -24,13 +24,16 @@ Taustore <- rep(-999, K)
 Lambdastore <- array(-999, dim = c(ny, K))
 
 
-seeds <- seeds[,-1]
-seeds <- round(seeds,2)
+#seeds <- seeds[,-1]
+
+#seeds <- round(seeds,2)
 #write.csv(seeds, file = "seeds.csv")
 
-seeds <- read.csv("seeds.csv")[,-1]
+#seeds <- read.csv("seeds.csv")[,-1]
 
-seeds
+#load("seedsnew.R")
+
+
 
 Sufficient.BetaChains <- list(1)
 Sufficient.TauChain <- list(1)
@@ -55,47 +58,57 @@ TrueBeta <- c(3, -1, 1.5)
 # y <- out[[1]]
 # X <- out[[2]]
 
-load("X.r")
-read.csv("X.csv")
+#load("X.r")
 
-y <- read.csv("y.csv")[,-1]
-X <- read.csv("X.csv")[,-1]
 
-X <- as.matrix(X)
+#y <- read.csv("y.csv")[,-1]
+#X <- read.csv("X.csv")[,-1]
+
+#X <- as.matrix(X)
+
+#load("xnew.R")
+#load("ynew.R")
 
 #write.csv(X, file = "X.csv")
 #write.csv(y, file   = "y.csv")
 
-Betastore <- Sandwich.BetaChains[[5]]
+#Betastore <- Sandwich.BetaChains[[5]]
 
-Beta.Var <- var(Betastore)
+combine <- data.frame(X%*%TrueBeta, y)
 
-sdB1 <- sd(Betastore[-(1:500),1])
-sdB2 <- sd(Betastore[-(1:500),2])
-sdB3 <- sd(Betastore[-(1:500),3])
+colnames(combine) <- c("XBeta", "Y")
 
-mnB1 <- mean(Betastore[-(1:500),1])
-mnB2 <- mean(Betastore[-(1:500),2])
-mnB3 <- mean(Betastore[-(1:500),3])
+ggplot(combine, aes(x = XBeta, y = Y)) + geom_point() + ggtitle("Data Set 2")
 
-seeds <- array(-999, dim = c(3,5))
 
-seeds[1,1:4] <- rt(4,2*sdB1/(1-sdB1))+mnB1
-seeds[2,1:4] <- rt(4,2*sdB2/(1-sdB2))+mnB2
-seeds[3,1:4] <- rt(4,2*sdB3/(1-sdB3))+mnB3
+#Beta.Var <- var(Betastore)
 
-for(i in 1:4){
-seeds[,i]  <-  rmvt(1, sigma = Beta.Var, delta = c(mnB1, mnB2,mnB3), df = c(2*sdB1/(1-sdB1), 2*sdB2/(1-sdB2), 2*sdB3/(1-sdB3)))
-}
+#sdB1 <- sd(Betastore[-(1:500),1])
+#sdB2 <- sd(Betastore[-(1:500),2])
+#sdB3 <- sd(Betastore[-(1:500),3])
 
-seeds[,5] <- TrueBeta
+#mnB1 <- mean(Betastore[-(1:500),1])
+#mnB2 <- mean(Betastore[-(1:500),2])
+#mnB3 <- mean(Betastore[-(1:500),3])
 
-save(seeds, file = "seeds.R")
+#seeds <- array(-999, dim = c(3,5))
+
+#seeds[1,1:4] <- rt(4,2*sdB1/(1-sdB1))+mnB1
+#seeds[2,1:4] <- rt(4,2*sdB2/(1-sdB2))+mnB2
+#seeds[3,1:4] <- rt(4,2*sdB3/(1-sdB3))+mnB3
+
+#for(i in 1:4){
+#  seeds[,i]  <-  rmvt(1, sigma = Beta.Var, delta = c(mnB1, mnB2,mnB3), df = c(2*sdB1/(1-sdB1), 2*sdB2/(1-sdB2), 2*sdB3/(1-sdB3)))
+#}
+
+#seeds[,5] <- TrueBeta
+
+#save(seeds, file = "seeds.R")
 
 Sigmanot <- constant*t(X)%*%X
 
 count <- 0
-
+counter <- 0
 for(v in 1:5){
   
   Beta <- seeds[,v] 
@@ -104,7 +117,7 @@ for(v in 1:5){
   Betastore[,zz] <- Beta
   
   zz <- zz + 1
--  counter <- counter + 1
+  counter <- counter + 1
   for(i in 1:K){
     
     for(j in 1:ny){
@@ -132,41 +145,32 @@ for(v in 1:5){
     
     Beta <- as.matrix(mvrnorm(n = 1, mu = ginv(t(X)%*%L%*%X+tau*Sigmanot)%*%t(X)%*%L%*%z, Sigma = ginv(t(X)%*%L%*%X+tau*Sigmanot)))
     
-
+    
     Betastore[,zz] <- Beta
     Taustore[zz-1] <- tau
     Lambdastore[,zz-1] <- lambda
     zz <- zz + 1
   }
   
- 
- 
+  
+  
   
   Sufficient.BetaChains[[count]] <- t(Betastore)
   Sufficient.TauChain[[count]] <- t(Taustore)
   Sufficient.LambdaChains[[count]] <- t(Lambdastore)
-
+  
 }
 
 
 
-load("X.r")
-
-save(Sufficient.BetaChains, file = "Sufficient.BetaChains.R")
-save(Sufficient.TauChain, file = "Sufficient.TauChains.R")
-save(Sufficient.LambdaChains, file = "Sufficient.LambdaChains.R")
-
-plot(Sufficient.BetaChains[[1]][,1])
-plot(Sufficient.BetaChains[[1]][,2])
-plot(Sufficient.BetaChains[[1]][,3])
-
-plot(Sufficient.BetaChains[[2]][,1])
-plot(Sufficient.BetaChains[[2]][,2])
-plot(Sufficient.BetaChains[[2]][,3])
+save(Sufficient.BetaChains, file = "Sufficient.BetaChains2.R")
+save(Sufficient.TauChain, file = "Sufficient.TauChains2.R")
+save(Sufficient.LambdaChains, file = "Sufficient.LambdaChains2.R")
 
 
 
-Sufficient.BetaChains[[1]][,3]
+
+
 
 ################### Ancillary Version #######################
 
@@ -185,192 +189,186 @@ for(v in 1:5){
   
   counter <- counter + 1
   for(i in 1:K){
-      for(j in 1:ny){
-        low <- -Inf
-        high <- Inf
-        ifelse(y[j] == 0, high <- -(X%*%Beta)[j], low <- -(X%*%Beta)[j])
-       
-        
-        eta[j] <- rtmvnorm(1, mean = 0, lower = low, upper = high, algorithm = "gibbs")
-        
-        a <- (nu+1)/2 
-        b <- (nu+(eta[j]^2))/2
-        
-        lambda[j] <- rgamma(1, a, b)
-      }
-      
-      atau <- (nunot + p)/2
-      btau <- (nunot + t(Beta)%*%Sigmanot%*%Beta)/2
-      
-      tau <- rgamma(1, atau, btau)
-      
-      ones <- which(y == 1)
-      zero <- which(y == 0)
-      
-      counthigh <- 0
-      countlow <- 0
-      low <- NA
-      high <- NA
-      
-      for(i in 1:length(ones)){
-        
-        if(X[ones[i],1] > 0){
-          countlow <- countlow + 1
-          low[countlow] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
-        }
-        
-        if(X[ones[i],1] < 0){
-          counthigh <- counthigh + 1
-          high[counthigh] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
-        }
-        
-      }
+    for(j in 1:ny){
+      low <- -Inf
+      high <- Inf
+      ifelse(y[j] == 0, high <- -(X%*%Beta)[j], low <- -(X%*%Beta)[j])
       
       
+      eta[j] <- rtmvnorm(1, mean = 0, lower = low, upper = high, algorithm = "gibbs")
       
-      for(i in 1:length(zero)){
-        
-        if(X[zero[i],1] < 0){
-          countlow <- countlow + 1
-          low[countlow] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
-        }
-        
-        if(X[zero[i],1] > 0){
-          counthigh <- counthigh + 1
-          high[counthigh] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
-        }  
-      }
+      a <- (nu+1)/2 
+      b <- (nu+(eta[j]^2))/2
       
-      bounds <- c(max(low),min(high))
-     
-      out <- conditionalmeansig(1,Sigmanot, Mu, Beta)
-      
-      condmu <- out[[1]]
-      
-      condsig <- out[[2]]
-      
-      Beta[1,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
-      
-      Lowerbound <- NA
-      lowercount <- 0
-      Higherbound <- NA
-      highercount <- 0
-      
-      for(i in 1:length(ones)){
-        
-        if(X[ones[i],2] > 0){
-          lowercount <- lowercount + 1
-          
-          Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]  
-          
-        }
-        if(X[ones[i],2] < 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]
-        }
-      }
-      
-      for(i in 1:length(zero)){
-        if(X[zero[i],2] > 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
-        }
-        
-        if(X[zero[i],2] < 0){
-          lowercount <- lowercount + 1
-          Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
-        }
-        
-      }
-      
-      bounds <- c(max(Lowerbound),  min(Higherbound))
-      
-      out <- conditionalmeansig(2,Sigmanot, Mu, Beta)
-      
-      condmu <- out[[1]]
-      
-      condsig <- out[[2]]
-      
-      Beta[2,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
-      
-      
-      
-      Lowerbound <- NA
-      lowercount <- 0
-      Higherbound <- NA
-      highercount <- 0
-      
-      for(i in 1:length(ones)){
-        
-        if(X[ones[i],3] > 0){
-          lowercount <- lowercount + 1
-          
-          Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]  
-          
-        }
-        if(X[ones[i],3] < 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]
-        }
-      }
-      
-      for(i in 1:length(zero)){
-        if(X[zero[i],3] > 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
-        }
-        
-        if(X[zero[i],3] < 0){
-          lowercount <- lowercount + 1
-          Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
-        }
-        
-      }
-      
-      bounds <- c(max(Lowerbound),  min(Higherbound))
-      
+      lambda[j] <- rgamma(1, a, b)
+    }
     
-      out <- conditionalmeansig(3,Sigmanot, Mu, Beta)
+    atau <- (nunot + p)/2
+    btau <- (nunot + t(Beta)%*%Sigmanot%*%Beta)/2
+    
+    tau <- rgamma(1, atau, btau)
+    
+    ones <- which(y == 1)
+    zero <- which(y == 0)
+    
+    counthigh <- 0
+    countlow <- 0
+    low <- NA
+    high <- NA
+    
+    for(i in 1:length(ones)){
       
-      condmu <- out[[1]]
+      if(X[ones[i],1] > 0){
+        countlow <- countlow + 1
+        low[countlow] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
+      }
       
-      condsig <- out[[2]]
-      
-      Beta[3,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
-      
-      
-      
-      
-      
-      Betastore[,zz] <- Beta
-      Taustore[zz-1] <- tau
-      Lambdastore[,zz-1] <- lambda
-      zz <- zz + 1
+      if(X[ones[i],1] < 0){
+        counthigh <- counthigh + 1
+        high[counthigh] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
+      }
       
     }
     
+    
+    
+    for(i in 1:length(zero)){
+      
+      if(X[zero[i],1] < 0){
+        countlow <- countlow + 1
+        low[countlow] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
+      }
+      
+      if(X[zero[i],1] > 0){
+        counthigh <- counthigh + 1
+        high[counthigh] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
+      }  
+    }
+    
+    bounds <- c(max(low),min(high))
+    
+    out <- conditionalmeansig(1,Sigmanot, Mu, Beta)
+    
+    condmu <- out[[1]]
+    
+    condsig <- out[[2]]
+    
+    Beta[1,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
+    
+    Lowerbound <- NA
+    lowercount <- 0
+    Higherbound <- NA
+    highercount <- 0
+    
+    for(i in 1:length(ones)){
+      
+      if(X[ones[i],2] > 0){
+        lowercount <- lowercount + 1
+        
+        Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]  
+        
+      }
+      if(X[ones[i],2] < 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]
+      }
+    }
+    
+    for(i in 1:length(zero)){
+      if(X[zero[i],2] > 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
+      }
+      
+      if(X[zero[i],2] < 0){
+        lowercount <- lowercount + 1
+        Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
+      }
+      
+    }
+    
+    bounds <- c(max(Lowerbound),  min(Higherbound))
+    
+    out <- conditionalmeansig(2,Sigmanot, Mu, Beta)
+    
+    condmu <- out[[1]]
+    
+    condsig <- out[[2]]
+    
+    Beta[2,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
+    
+    
+    
+    Lowerbound <- NA
+    lowercount <- 0
+    Higherbound <- NA
+    highercount <- 0
+    
+    for(i in 1:length(ones)){
+      
+      if(X[ones[i],3] > 0){
+        lowercount <- lowercount + 1
+        
+        Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]  
+        
+      }
+      if(X[ones[i],3] < 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]
+      }
+    }
+    
+    for(i in 1:length(zero)){
+      if(X[zero[i],3] > 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
+      }
+      
+      if(X[zero[i],3] < 0){
+        lowercount <- lowercount + 1
+        Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
+      }
+      
+    }
+    
+    bounds <- c(max(Lowerbound),  min(Higherbound))
+    
+    
+    out <- conditionalmeansig(3,Sigmanot, Mu, Beta)
+    
+    condmu <- out[[1]]
+    
+    condsig <- out[[2]]
+    
+    Beta[3,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
+    
+    
+    
+    
+    
+    Betastore[,zz] <- Beta
+    Taustore[zz-1] <- tau
+    Lambdastore[,zz-1] <- lambda
+    zz <- zz + 1
+    
+  }
   
-Ancillary.BetaChains[[counter]] <- t(Betastore)
-Ancillary.TauChain[[counter]] <- t(Taustore)
-Ancillary.LambdaChains[[counter]] <- t(Lambdastore)
-
-
+  
+  Ancillary.BetaChains[[counter]] <- t(Betastore)
+  Ancillary.TauChain[[counter]] <- t(Taustore)
+  Ancillary.LambdaChains[[counter]] <- t(Lambdastore)
+  
+  
 }
 
 
 
-save(Ancillary.BetaChains, file = "Ancillary.BetaChains.R")
-save(Ancillary.TauChain, file = "Ancillary.TauChain.R")
-save(Ancillary.LambdaChains, file = "Ancillary.LambdaChains.R")
-
-
-write.csv(Ancillary.BetaChains, file = "ancillaryBetaChains.csv")
-write.csv(Ancillary.TauChain, file = "ancillaryTauChain.csv")
-write.csv(Ancillary.LambdaChains, file = "ancillaryLambdachains.csv" )
+save(Ancillary.BetaChains, file = "Ancillary.BetaChains2.R")
+save(Ancillary.TauChain, file = "Ancillary.TauChain2.R")
+save(Ancillary.LambdaChains, file = "Ancillary.LambdaChains2.R")
 
 
 
-load("Ancillary.BetaChains.R")
 ############ ASIS VERSION #############################
 
 
@@ -386,196 +384,192 @@ counter <- 0
 
 
 for(v in 1:5){
-
+  
   Beta <- as.matrix(seeds[,v])
   
   zz <- 1
   
   
   counter <- counter + 1 
-    for(i in 1:K){
-      for(j in 1:ny){
-        low <- -Inf
-        high <- Inf
-        ifelse(y[j] == 0, high <- -(X%*%Beta)[j], low <- -(X%*%Beta)[j])
-        
-        
-        eta[j] <- rtmvnorm(1, mean = 0, lower = low, upper = high, algorithm = "gibbs")
-        
-        a <- (nu+1)/2 
-        b <- (nu+(eta[j]^2))/2
-        
-        lambda[j] <- rgamma(1, a, b)
+  for(i in 1:K){
+    for(j in 1:ny){
+      low <- -Inf
+      high <- Inf
+      ifelse(y[j] == 0, high <- -(X%*%Beta)[j], low <- -(X%*%Beta)[j])
+      
+      
+      eta[j] <- rtmvnorm(1, mean = 0, lower = low, upper = high, algorithm = "gibbs")
+      
+      a <- (nu+1)/2 
+      b <- (nu+(eta[j]^2))/2
+      
+      lambda[j] <- rgamma(1, a, b)
+    }
+    
+    atau <- (nunot + p)/2
+    btau <- (nunot + t(Beta)%*%Sigmanot%*%Beta)/2
+    
+    tau <- rgamma(1, atau, btau)
+    
+    ones <- which(y == 1)
+    zero <- which(y == 0)
+    counthigh <- 0
+    countlow <- 0
+    low <- NA
+    high <- NA
+    
+    for(i in 1:length(ones)){
+      
+      if(X[ones[i],1] > 0){
+        countlow <- countlow + 1
+        low[countlow] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
       }
       
-      atau <- (nunot + p)/2
-      btau <- (nunot + t(Beta)%*%Sigmanot%*%Beta)/2
-      
-      tau <- rgamma(1, atau, btau)
-      
-      ones <- which(y == 1)
-      zero <- which(y == 0)
-      counthigh <- 0
-      countlow <- 0
-      low <- NA
-      high <- NA
-      
-      for(i in 1:length(ones)){
-        
-        if(X[ones[i],1] > 0){
-          countlow <- countlow + 1
-          low[countlow] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
-        }
-        
-        if(X[ones[i],1] < 0){
-          counthigh <- counthigh + 1
-          high[counthigh] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
-        }
-        
+      if(X[ones[i],1] < 0){
+        counthigh <- counthigh + 1
+        high[counthigh] <- (-eta[ones[i]]-X[ones[i],-1]%*%Beta[-1,])/X[ones[i],1]
       }
-      
-      
-      
-      for(i in 1:length(zero)){
-        
-        if(X[zero[i],1] < 0){
-          countlow <- countlow + 1
-          low[countlow] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
-        }
-        
-        if(X[zero[i],1] > 0){
-          counthigh <- counthigh + 1
-          high[counthigh] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
-        }  
-      }
-      
-      bounds <- c(max(low),min(high))
-      
-      out <- conditionalmeansig(1,Sigmanot, Mu, Beta)
-      
-      condmu <- out[[1]]
-      
-      condsig <- out[[2]]
-      
-      Beta[1,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
-      
-      Lowerbound <- NA
-      lowercount <- 0
-      Higherbound <- NA
-      highercount <- 0
-      
-      for(i in 1:length(ones)){
-        
-        if(X[ones[i],2] > 0){
-          lowercount <- lowercount + 1
-          
-          Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]  
-          
-        }
-        if(X[ones[i],2] < 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]
-        }
-      }
-      
-      for(i in 1:length(zero)){
-        if(X[zero[i],2] > 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
-        }
-        
-        if(X[zero[i],2] < 0){
-          lowercount <- lowercount + 1
-          Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
-        }
-        
-      }
-      
-      bounds <- c(max(Lowerbound),  min(Higherbound))
-      
-      out <- conditionalmeansig(2,Sigmanot, Mu, Beta)
-      
-      condmu <- out[[1]]
-      
-      condsig <- out[[2]]
-      
-      Beta[2,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
-      
-      
-      
-      Lowerbound <- NA
-      lowercount <- 0
-      Higherbound <- NA
-      highercount <- 0
-      
-      for(i in 1:length(ones)){
-        
-        if(X[ones[i],3] > 0){
-          lowercount <- lowercount + 1
-          
-          Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]  
-          
-        }
-        if(X[ones[i],3] < 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]
-        }
-      }
-      
-      for(i in 1:length(zero)){
-        if(X[zero[i],3] > 0){
-          highercount <- highercount + 1
-          Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
-        }
-        
-        if(X[zero[i],3] < 0){
-          lowercount <- lowercount + 1
-          Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
-        }
-        
-      }
-      
-      bounds <- c(max(Lowerbound),  min(Higherbound))
-      
-      
-      out <- conditionalmeansig(3,Sigmanot, Mu, Beta)
-      
-      condmu <- out[[1]]
-      
-      condsig <- out[[2]]
-      
-      Beta[3,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
-      
-      L <- diag(lambda)
-      
-      z <- eta + X%*%Beta
-      
-      Beta <- as.matrix(mvrnorm(n = 1, mu = ginv(t(X)%*%L%*%X+tau*Sigmanot)%*%t(X)%*%L%*%z, Sigma = ginv(t(X)%*%L%*%X+tau*Sigmanot)))
-      
-      Betastore[,zz] <- Beta
-      Taustore[zz-1] <- tau
-      Lambdastore[,zz-1] <- lambda
-      zz <- zz + 1
       
     }
     
-    ASIS.BetaChains[[counter]] <- t(Betastore)
-    ASIS.TauChain[[counter]] <- t(Taustore)
-    ASIS.LambdaChains[[counter]] <- t(Lambdastore)
     
+    
+    for(i in 1:length(zero)){
+      
+      if(X[zero[i],1] < 0){
+        countlow <- countlow + 1
+        low[countlow] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
+      }
+      
+      if(X[zero[i],1] > 0){
+        counthigh <- counthigh + 1
+        high[counthigh] <- (-eta[zero[i]]-X[zero[i],-1]%*%Beta[-1,])/X[zero[i],1]
+      }  
+    }
+    
+    bounds <- c(max(low),min(high))
+    
+    out <- conditionalmeansig(1,Sigmanot, Mu, Beta)
+    
+    condmu <- out[[1]]
+    
+    condsig <- out[[2]]
+    
+    Beta[1,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
+    
+    Lowerbound <- NA
+    lowercount <- 0
+    Higherbound <- NA
+    highercount <- 0
+    
+    for(i in 1:length(ones)){
+      
+      if(X[ones[i],2] > 0){
+        lowercount <- lowercount + 1
+        
+        Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]  
+        
+      }
+      if(X[ones[i],2] < 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-2]%*%Beta[-2,])/X[ones[i],2]
+      }
+    }
+    
+    for(i in 1:length(zero)){
+      if(X[zero[i],2] > 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
+      }
+      
+      if(X[zero[i],2] < 0){
+        lowercount <- lowercount + 1
+        Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-2]%*%Beta[-2,])/X[zero[i],2]
+      }
+      
+    }
+    
+    bounds <- c(max(Lowerbound),  min(Higherbound))
+    
+    out <- conditionalmeansig(2,Sigmanot, Mu, Beta)
+    
+    condmu <- out[[1]]
+    
+    condsig <- out[[2]]
+    
+    Beta[2,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
+    
+    
+    
+    Lowerbound <- NA
+    lowercount <- 0
+    Higherbound <- NA
+    highercount <- 0
+    
+    for(i in 1:length(ones)){
+      
+      if(X[ones[i],3] > 0){
+        lowercount <- lowercount + 1
+        
+        Lowerbound[lowercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]  
+        
+      }
+      if(X[ones[i],3] < 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[ones[i]]+X[ones[i],-3]%*%Beta[-3,])/X[ones[i],3]
+      }
+    }
+    
+    for(i in 1:length(zero)){
+      if(X[zero[i],3] > 0){
+        highercount <- highercount + 1
+        Higherbound[highercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
+      }
+      
+      if(X[zero[i],3] < 0){
+        lowercount <- lowercount + 1
+        Lowerbound[lowercount] <- -(eta[zero[i]]+X[zero[i],-3]%*%Beta[-3,])/X[zero[i],3]
+      }
+      
+    }
+    
+    bounds <- c(max(Lowerbound),  min(Higherbound))
+    
+    
+    out <- conditionalmeansig(3,Sigmanot, Mu, Beta)
+    
+    condmu <- out[[1]]
+    
+    condsig <- out[[2]]
+    
+    Beta[3,] <- rtruncnorm(1, a = bounds[1], b = bounds[2], mean = condmu, sd = condsig)
+    
+    L <- diag(lambda)
+    
+    z <- eta + X%*%Beta
+    
+    Beta <- as.matrix(mvrnorm(n = 1, mu = ginv(t(X)%*%L%*%X+tau*Sigmanot)%*%t(X)%*%L%*%z, Sigma = ginv(t(X)%*%L%*%X+tau*Sigmanot)))
+    
+    Betastore[,zz] <- Beta
+    Taustore[zz-1] <- tau
+    Lambdastore[,zz-1] <- lambda
+    zz <- zz + 1
+    
+  }
+  
+  ASIS.BetaChains[[counter]] <- t(Betastore)
+  ASIS.TauChain[[counter]] <- t(Taustore)
+  ASIS.LambdaChains[[counter]] <- t(Lambdastore)
+  
 }
 
 
 
 
-save(ASIS.BetaChains, file = "ASIS.BetaChains.R")
-save(ASIS.TauChain, file = "ASIS.TauChain.R")
-save(ASIS.LambdaChains, file = "ASIS.LambdaChains.R")
+save(ASIS.BetaChains, file = "ASIS.BetaChains2.R")
+save(ASIS.TauChain, file = "ASIS.TauChain2.R")
+save(ASIS.LambdaChains, file = "ASIS.LambdaChains2.R")
 
-
-write.csv(ASIS.BetaChains, file = "ASISBetaChains.csv")
-write.csv(ASIS.TauChain, file = "ASISTauChain.csv")
-write.csv(ASIS.LambdaChains, file = "ASISLambdachains.csv" )
 
 count <- 0
 gstore <- NA
@@ -660,14 +654,15 @@ for(v in 1:5){
 
 
 
-save(Sandwich.BetaChains, file = "Sandwich.BetaChains.R")
-save(Sandwich.TauChain, file = "Sandwich.TauChain.R")
-save(Sandwich.LambdaChains, file = "Sandwich.LambdaChains.R")
+save(Sandwich.BetaChains, file = "Sandwich.BetaChains2.R")
+save(Sandwich.TauChain, file = "Sandwich.TauChain2.R")
+save(Sandwich.LambdaChains, file = "Sandwich.LambdaChains2.R")
 
 
 
 
 mcmclist <- list(1)
+
 
 for(i in 1:5){
   colnames(ASIS.BetaChains[[i]]) <- c("Beta.1", "Beta.2", "Beta.3")
@@ -700,13 +695,15 @@ Sand.Beta.ACF <- BetaAggregate(Sandwich.BetaChains, "Sandwich")
 
 ACF <- rbind(Suff.Beta.ACF, Anc.Beta.ACF, ASIS.Beta.ACF, Sand.Beta.ACF)
 
-ggplot(ACF, aes(x = Lag, y = values, colour = Method)) + geom_line() + facet_grid(Beta ~ Chain)
+ggplot(ACF, aes(x = Lag, y = values, colour = Method)) + geom_line() + facet_grid(Beta ~ Chain) + ggtitle("ACF-Data Set 2")
 
 
 ### Trace Plotting ####
 
-trace(Sufficient.BetaChains, 1, Beta.3)
-
+trace(Sufficient.BetaChains, seed = 1, title = "Sufficient Chain 1, Imbalanced")
+trace(Ancillary.BetaChains, 1, title = "Ancillary Chain 1, Imbalanced")
+trace(ASIS.BetaChains, 1, title = "ASIS Chain 1, Imbalanced")
+trace(Sandwich.BetaChains, 1, title = "Sandwich Chain 1, Imbalanced")
 
 #### Gelman Plotting ####
 
@@ -752,13 +749,13 @@ kk.B2 <- kk[kk$Beta == "Beta.2",]
 
 kk.B3 <- kk[kk$Beta == "Beta.3",]
 
-ggplot(kk.B1, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman Beta 0")
+ggplot(kk.B1, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman-Beta_0, Balanced Data")
 
 
-ggplot(kk.B2, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman Beta 1")
+ggplot(kk.B2, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman-Beta_1, Balanced Data")
 
 
-ggplot(kk.B3, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman Beta 2") 
+ggplot(kk.B3, aes(x = Iteration, y = Value, colour = Method)) + geom_line() + ggtitle("Gelman-Beta_2, Balanced Data") 
 
 ### 
 
@@ -780,7 +777,7 @@ Geweke <- data.frame(Geweke, colors)
 colnames(Geweke)[length(colnames(Geweke))] <- "Z.score"
 
 
-ggplot(data = Geweke, aes(x = Init.Fraction, y = End.Fraction))+geom_point(aes(color = Z.score))+facet_wrap(Method~Chain)+scale_colour_manual(values = c("green", "yellow", "red"))
+ggplot(data = Geweke, aes(x = Init.Fraction, y = End.Fraction))+geom_point(aes(color = Z.score))+facet_wrap(Method~Chain)+scale_colour_manual(values = c("green", "yellow", "red")) + ggtitle("Geweke Balanced Data")
 
 
 
