@@ -127,8 +127,7 @@ for(v in 1:5){
       ifelse(y[j] == 0, high <- 0, low <- 0)
       
       z[j] <- rtmvnorm(1, mean = (X%*%Beta)[j], lower = low, upper = high, algorithm = "gibbs")
-      cbind((X%*%Beta),z,y)
-      
+            
       a <- (nu+1)/2 
       b <- (nu+(z[j]-(X%*%Beta)[j])^2)/2
       
